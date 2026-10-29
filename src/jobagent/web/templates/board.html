@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Job board · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Mock job board</h2>
+<p class="muted">The postings the job researcher searches. All fictional.</p>
+<table>
+  <thead><tr><th>Job</th><th>Company</th><th>Location</th><th>Posted</th></tr></thead>
+  <tbody>
+  {% for job in jobs %}
+    <tr><td><a href="{{ job.url }}">{{ job.title }}</a></td><td>{{ world.company(job.company_id).name }}</td>
+        <td>{{ job.location }}</td><td class="nowrap">{{ job.posted }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

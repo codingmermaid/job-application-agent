@@ -1,0 +1,25 @@
+{
+  "id": "cand-001",
+  "name": "Mila Jovanović",
+  "email": "mila.jovanovic@example.com",
+  "location": "Novi Sad, Serbia",
+  "country": "Serbia",
+  "work_authorization": "Serbian citizen. No work permit for the EU or the US.",
+  "portfolio_url": "https://portfolio.example/mila",
+  "headline": "Junior data analyst with internship experience in e-commerce reporting, SQL and Power BI.",
+  "facts": [
+    {"id": "F1", "text": "BSc in Economics, University of Novi Sad, graduated 2025. Thesis on regional retail price trends using regression analysis."},
+    {"id": "F2", "text": "Google Data Analytics Professional Certificate, completed 2025."},
+    {"id": "F3", "text": "Six-month data analyst internship at PazarPlus, an online marketplace in Serbia, February to July 2025."},
+    {"id": "F4", "text": "At PazarPlus, built a weekly sales dashboard in Power BI used by the five-person category team."},
+    {"id": "F5", "text": "At PazarPlus, wrote PostgreSQL queries to clean and join order and returns data, cutting a manual monthly report from about two days to half a day."},
+    {"id": "F6", "text": "Personal project: analysed three years of Novi Sad public transport ridership data with Python (pandas, matplotlib) and published the notebook on GitHub."},
+    {"id": "F7", "text": "Personal project: Tableau Public dashboard of Serbian housing prices by city."},
+    {"id": "F8", "text": "Skills: SQL (PostgreSQL), Excel (pivot tables, XLOOKUP), Python (pandas, matplotlib), Power BI, basic Tableau."},
+    {"id": "F9", "text": "Coursework in statistics: hypothesis testing, linear regression and A/B test analysis."},
+    {"id": "F10", "text": "Languages: Serbian (native), English (C1, IELTS 7.5)."},
+    {"id": "F11", "text": "Worked remotely for two months of the internship, using Slack and Jira."},
+    {"id": "F12", "text": "Volunteer, 2023 to 2024: maintained the donations spreadsheet and monthly report for a local animal shelter."}
+  ],
+  "no_experience_with": ["dbt", "Airflow", "Looker", "R", "machine learning in production", "Google Analytics"]
+}

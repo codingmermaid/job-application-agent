@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Application Agents{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul><li><a href="/" class="brand"><strong>Job Application Agents</strong></a></li></ul>
+      <ul>
+        <li><a href="/board">Job board</a></li>
+        <li><a href="/tracker">Tracker</a></li>
+        <li><a href="/portal">Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container muted">
+    Practice project. All companies, jobs, the candidate and the portal are fictional.
+  </footer>
+</body>
+</html>

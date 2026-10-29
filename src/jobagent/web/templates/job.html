@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title }} · {{ company.name }}{% endblock %}
+{% block content %}
+<hgroup>
+  <h2>{{ job.title }}</h2>
+  <p>{{ company.name }} · {{ job.location }} · {{ job.salary }} · posted {{ job.posted }}</p>
+</hgroup>
+<article><div class="prewrap">{{ job.description }}</div></article>
+<details>
+  <summary>About {{ company.name }}</summary>
+  {% for page, text in company.pages.items() %}<p><strong>{{ page|capitalize }}.</strong> {{ text }}</p>{% endfor %}
+</details>
+<p><a href="/board">Back to the job board</a></p>
+{% endblock %}

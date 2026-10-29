@@ -1,0 +1,90 @@
+[
+  {
+    "id": "nimbus-ledger",
+    "name": "Nimbus Ledger",
+    "website": "https://nimbusledger.example",
+    "pages": {
+      "about": "Nimbus Ledger makes invoicing and bookkeeping software for small businesses across Europe. The company has about 120 employees and has been remote-first since it was founded in 2019. Teams work asynchronously and write decisions down in public documents.",
+      "product": "The Nimbus app lets freelancers and small shops send invoices, track expenses and prepare VAT reports. More than 40,000 businesses use it every month.",
+      "news": "In March 2026 Nimbus Ledger launched multi-currency invoicing, so customers can bill clients in 18 currencies. The finance analytics team is growing to measure how customers adopt the feature.",
+      "careers": "We value clear writing, curiosity and ownership. Analysts at Nimbus work closely with product managers and present findings in a weekly metrics review."
+    }
+  },
+  {
+    "id": "fernwood-health",
+    "name": "Fernwood Health",
+    "website": "https://fernwoodhealth.example",
+    "pages": {
+      "about": "Fernwood Health runs a telehealth scheduling platform for clinics in the United States.",
+      "product": "Clinics use Fernwood to book video appointments, send reminders and reduce missed visits.",
+      "news": "Fernwood Health expanded to 300 clinics in 2026.",
+      "careers": "Because we handle US patient data, all roles require authorization to work in the United States."
+    }
+  },
+  {
+    "id": "orbital-grocers",
+    "name": "Orbital Grocers",
+    "website": "https://orbitalgrocers.example",
+    "pages": {
+      "about": "Orbital Grocers delivers groceries within 30 minutes in Berlin, Hamburg and Munich.",
+      "product": "Customers order through the Orbital app from a catalogue of 4,000 products stocked in small city warehouses.",
+      "news": "Orbital Grocers opened its tenth Berlin warehouse in 2026.",
+      "careers": "Most office roles are hybrid, with three days a week in our Berlin headquarters."
+    }
+  },
+  {
+    "id": "quill-analytics",
+    "name": "Quill & Co Analytics",
+    "website": "https://quillanalytics.example",
+    "pages": {
+      "about": "Quill & Co Analytics is a 25-person data consultancy that builds dashboards and reporting for retailers and non-profit organisations. The whole team works remotely across nine countries.",
+      "product": "Quill delivers reporting projects in four to eight weeks, usually in Tableau or Power BI, and trains client staff to maintain them.",
+      "news": "In 2026 Quill started a programme offering discounted dashboards to small charities.",
+      "careers": "Junior analysts pair with a senior consultant on every client project and present their work directly to clients."
+    }
+  },
+  {
+    "id": "tidewater-mobility",
+    "name": "Tidewater Mobility",
+    "website": "https://tidewatermobility.example",
+    "pages": {
+      "about": "Tidewater Mobility operates shared e-bikes and e-scooters in twelve cities across the Western Balkans, with its main office in Belgrade.",
+      "product": "Riders unlock vehicles in the Tidewater app. City partners receive monthly reports on trips, parking and safety.",
+      "news": "Tidewater Mobility launched in Novi Sad and Skopje in 2026 and now records about 1.5 million trips a month.",
+      "careers": "Our data team uses SQL and Python to plan where vehicles should be placed and to report to city governments."
+    }
+  },
+  {
+    "id": "brightloom",
+    "name": "Brightloom Education",
+    "website": "https://brightloom.example",
+    "pages": {
+      "about": "Brightloom Education runs an online learning platform with short professional courses in data, design and management.",
+      "product": "Learners take self-paced courses with weekly mentor sessions. Course teams use experiments to improve completion rates.",
+      "news": "Brightloom passed 500,000 enrolled learners in 2026 and opened a mentoring programme in Africa and the Middle East.",
+      "careers": "We hire remotely across Europe, the Middle East and Africa (EMEA)."
+    }
+  },
+  {
+    "id": "kestrel-logistics",
+    "name": "Kestrel Logistics",
+    "website": "https://kestrellogistics.example",
+    "pages": {
+      "about": "Kestrel Logistics builds software that helps freight companies plan routes and track shipments.",
+      "product": "Dispatchers use Kestrel to assign loads and predict delivery times.",
+      "news": "Kestrel signed three national rail freight operators in 2026.",
+      "careers": "For legal reasons, we can only hire people who live in an EU member state."
+    }
+  },
+  {
+    "id": "pinecrest-games",
+    "name": "Pinecrest Games",
+    "website": "https://pinecrestgames.example",
+    "pages": {
+      "about": "Pinecrest Games is an independent mobile games studio with 60 people working remotely around the world.",
+      "product": "Pinecrest's best-known game, Harbor Lights, is a cosy puzzle game with about two million monthly players.",
+      "news": "In 2026 Pinecrest began testing new levels with A/B experiments before releasing them to all players.",
+      "careers": "Our player insights team turns gameplay data into decisions for designers. We welcome applicants from any country."
+    }
+  }
+]

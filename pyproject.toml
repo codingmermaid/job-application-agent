@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-application-agent"
+version = "0.1.0"
+description = "Multi-agent job application system: research, tailor, review, approve, submit, track"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "google-genai>=1.0",
+    "langgraph>=1.0",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jobagent = ["web/templates/*.html", "web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

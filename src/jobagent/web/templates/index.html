@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <article>
+    <header><strong>Candidate</strong></header>
+    <h3>{{ candidate.name }}</h3>
+    <p class="muted">{{ candidate.location }} · {{ candidate.work_authorization }}</p>
+    <p>{{ candidate.headline }}</p>
+    <details>
+      <summary>Verified facts ({{ candidate.facts|length }})</summary>
+      <ul class="facts">
+        {% for f in candidate.facts %}<li><code>{{ f.id }}</code> {{ f.text }}</li>{% endfor %}
+      </ul>
+      <p class="muted">No experience with: {{ candidate.no_experience_with|join(", ") }}</p>
+    </details>
+  </article>
+
+  <article>
+    <header><strong>New search</strong></header>
+    <form method="post" action="/runs">
+      <label>What should the agents do?
+        <textarea name="request" rows="5" required>{{ example }}</textarea>
+      </label>
+      <button type="submit" aria-busy="false" onclick="this.setAttribute('aria-busy','true')">Start</button>
+    </form>
+    <p class="muted small">Six agents: coordinator, job researcher, company researcher, writer, reviewer, submission.
+      You choose the jobs and approve every application before anything is submitted.</p>
+  </article>
+</div>
+
+<h4>Recent runs</h4>
+{% if runs %}
+<table>
+  <thead><tr><th>Run</th><th>Request</th><th>Started</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr><td><a href="/runs/{{ r.run_id }}">{{ r.run_id }}</a></td><td>{{ r.request }}</td>
+        <td class="nowrap">{{ r.created_at.strftime("%d %b %H:%M") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No runs yet.</p>
+{% endif %}
+<p class="muted small">LLM this session: {{ usage.calls }} calls ({{ usage.cached }} cached), {{ usage.tokens_in }} in / {{ usage.tokens_out }} out tokens.</p>
+{% endblock %}

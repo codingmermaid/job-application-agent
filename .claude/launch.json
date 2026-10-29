@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "job-agents",
+      "runtimeExecutable": ".venv/Scripts/uvicorn.exe",
+      "runtimeArgs": ["jobagent.web.main:app", "--port", "8610"],
+      "port": 8610
+    }
+  ]
+}

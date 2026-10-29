@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Portal · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Mock application portal</h2>
+<p class="muted">What actually reached the employers' portal. One row per application: if a retry ever
+created a duplicate, it would show up here twice.</p>
+{% if not submissions %}<p class="muted">No applications received yet.</p>{% endif %}
+<table>
+  <thead><tr><th>Confirmation</th><th>Job</th><th>Idempotency key</th><th>Received</th></tr></thead>
+  <tbody>
+  {% for s in submissions %}
+    {% set job = world.job(s.job_id) %}
+    <tr><td><code>{{ s.confirmation_id }}</code></td><td>{{ job.title }} · {{ world.company(job.company_id).name }}</td>
+        <td><code>{{ s.idempotency_key }}</code></td><td class="nowrap">{{ s.created_at.strftime("%d %b %H:%M:%S") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

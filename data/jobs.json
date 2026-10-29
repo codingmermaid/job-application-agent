@@ -1,0 +1,137 @@
+[
+  {
+    "id": "j01",
+    "title": "Junior Data Analyst",
+    "company_id": "nimbus-ledger",
+    "location": "Remote (Europe)",
+    "salary": "EUR 28,000-34,000",
+    "posted": "2026-10-20",
+    "description": "Join our finance analytics team to measure how small businesses use Nimbus.\n\nYou will:\n- Write SQL to answer product questions\n- Build and maintain dashboards in Power BI or Looker\n- Present findings in our weekly metrics review\n\nRequirements:\n- Solid SQL\n- Experience with a BI tool such as Power BI or Looker\n- Strong Excel or Google Sheets skills\n- Fluent written English\n- Nice to have: Python for analysis\n\nLocation: fully remote. We hire anywhere in Europe, including countries outside the EU, as long as you work within CET plus or minus two hours.\n\nHow to apply: apply through our careers portal and answer two short questions.",
+    "apply": {
+      "method": "portal",
+      "questions": ["Why do you want to work at Nimbus Ledger?", "Describe a time you automated or sped up a report."]
+    },
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j02",
+    "title": "Data Analyst (Junior)",
+    "company_id": "fernwood-health",
+    "location": "Remote (US)",
+    "salary": "USD 60,000-70,000",
+    "posted": "2026-10-18",
+    "description": "Help clinics reduce missed appointments by analysing scheduling data.\n\nRequirements:\n- SQL and Excel\n- Tableau or Power BI\n- Must be authorized to work in the United States; we cannot sponsor visas\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Why healthcare?"]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j03",
+    "title": "Junior BI Analyst",
+    "company_id": "orbital-grocers",
+    "location": "Berlin (hybrid)",
+    "salary": "EUR 45,000",
+    "posted": "2026-10-15",
+    "description": "Build reporting for our warehouse operations team.\n\nRequirements:\n- SQL and Power BI\n- German is a plus\n\nThis is a hybrid role: three days a week in our Berlin office. Relocation support is not available.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Which warehouse metric would you track first?"]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j04",
+    "title": "Junior Data Analyst",
+    "company_id": "quill-analytics",
+    "location": "Remote (worldwide, contractor)",
+    "salary": "USD 2,000-2,600 per month",
+    "posted": "2026-10-22",
+    "description": "Work with a senior consultant to build dashboards for retail and non-profit clients.\n\nRequirements:\n- SQL for cleaning and joining data\n- Dashboards in Tableau or Power BI\n- Comfortable presenting to clients in English\n- Nice to have: experience with non-profit or retail data\n\nLocation: remote from any country, on a contractor agreement.\n\nHow to apply: through our careers portal. Include one dashboard you are proud of.",
+    "apply": {"method": "portal", "questions": ["Which dashboard are you proudest of, and why?"]},
+    "portal_behavior": "timeout_after_commit"
+  },
+  {
+    "id": "j05",
+    "title": "Mobility Data Analyst (Junior)",
+    "company_id": "tidewater-mobility",
+    "location": "Remote (Western Balkans) or Belgrade",
+    "salary": "EUR 1,400-1,800 per month",
+    "posted": "2026-10-25",
+    "description": "Help us decide where to place e-bikes and scooters, and report to city partners.\n\nRequirements:\n- SQL\n- Python with pandas\n- Clear reporting for non-technical audiences\n- Nice to have: maps or geospatial analysis\n- Serbian, Croatian, Bosnian or Macedonian is a plus\n\nLocation: remote from Serbia, Croatia, Bosnia and Herzegovina, Montenegro or North Macedonia, or from our Belgrade office.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Tell us about a dataset you explored with Python."]},
+    "portal_behavior": "unavailable_once"
+  },
+  {
+    "id": "j06",
+    "title": "Learning Analytics Analyst (Junior)",
+    "company_id": "brightloom",
+    "location": "Remote (EMEA)",
+    "salary": "EUR 26,000-30,000",
+    "posted": "2026-10-19",
+    "description": "Help course teams improve completion rates with data.\n\nRequirements:\n- SQL and Excel\n- Understanding of A/B testing\n- Nice to have: Python, Looker\n\nLocation: remote anywhere in Europe, the Middle East or Africa.\n\nHow to apply: email your CV and a short cover letter to careers@brightloom.example with the subject 'Learning Analytics Analyst'. We do not use an online portal for this role.",
+    "apply": {"method": "email", "email": "careers@brightloom.example", "questions": []},
+    "portal_behavior": "manual"
+  },
+  {
+    "id": "j07",
+    "title": "Junior Operations Data Analyst",
+    "company_id": "kestrel-logistics",
+    "location": "Remote (EU)",
+    "salary": "EUR 32,000",
+    "posted": "2026-10-21",
+    "description": "Analyse delivery times and route efficiency for our freight customers.\n\nRequirements:\n- SQL and Python\n- Power BI\n\nLocation: remote, but you must live in an EU member state.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["What would you measure to improve on-time delivery?"]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j08",
+    "title": "Player Insights Analyst (Junior)",
+    "company_id": "pinecrest-games",
+    "location": "Remote (worldwide)",
+    "salary": "USD 30,000-38,000",
+    "posted": "2026-10-24",
+    "description": "Turn gameplay data from Harbor Lights into decisions for our designers.\n\nRequirements:\n- SQL\n- Python for analysis\n- Understanding of A/B testing\n- Interest in games\n- Nice to have: dbt\n\nLocation: remote from anywhere in the world.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Tell us about an A/B test or experiment you analysed."]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j09",
+    "title": "Senior Data Scientist",
+    "company_id": "nimbus-ledger",
+    "location": "Remote (Europe)",
+    "salary": "EUR 70,000-85,000",
+    "posted": "2026-10-10",
+    "description": "Lead forecasting and machine learning work for Nimbus.\n\nRequirements:\n- 5+ years in data science\n- Production machine learning experience\n\nLocation: remote within Europe.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Describe an ML model you shipped."]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j10",
+    "title": "Data Engineering Intern",
+    "company_id": "pinecrest-games",
+    "location": "Remote (worldwide)",
+    "salary": "USD 1,200 per month",
+    "posted": "2026-10-23",
+    "description": "Help maintain our data pipelines.\n\nRequirements:\n- Python\n- Airflow and dbt\n\nLocation: remote from anywhere.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Describe a pipeline you built."]},
+    "portal_behavior": "ok"
+  },
+  {
+    "id": "j11",
+    "title": "Marketing Data Analyst (Junior)",
+    "company_id": "brightloom",
+    "location": "Remote (EMEA)",
+    "salary": "EUR 26,000-30,000",
+    "posted": "2026-10-26",
+    "description": "Measure our marketing campaigns and learner acquisition.\n\nRequirements:\n- SQL and Excel\n- Google Analytics\n- A BI tool such as Power BI or Looker\n\nLocation: remote anywhere in EMEA.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Which marketing metric matters most to an online course business?"]},
+    "portal_behavior": "reject"
+  },
+  {
+    "id": "j12",
+    "title": "Analytics Engineer",
+    "company_id": "quill-analytics",
+    "location": "Remote (worldwide)",
+    "salary": "USD 4,000 per month",
+    "posted": "2026-10-12",
+    "description": "Build data models for client reporting.\n\nRequirements:\n- 3+ years of experience\n- dbt and SQL\n\nLocation: remote from any country.\n\nHow to apply: through our careers portal.",
+    "apply": {"method": "portal", "questions": ["Describe a data model you designed."]},
+    "portal_behavior": "ok"
+  }
+]
