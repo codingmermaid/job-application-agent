@@ -1,0 +1,154 @@
+{% from "_macros.html" import cite, status_badge %}
+{% set v = view.state %}
+{% set run_id = view.run_id %}
+<div id="progress"
+     {% if view.status == "running" %}hx-get="/runs/{{ run_id }}/progress" hx-trigger="load delay:500ms" hx-swap="outerHTML"{% endif %}>
+
+  <p>
+    {% if view.status == "running" %}<span aria-busy="true">Agents working…</span>
+    {% elif view.status == "waiting" %}<mark>Waiting for you</mark>
+    {% elif view.status == "done" %}<ins>Finished</ins>
+    {% elif view.status == "cancelled" %}<span class="muted">Stopped</span>
+    {% elif view.status == "error" %}<del>Something failed</del>{% endif %}
+  </p>
+
+  {% if view.status == "error" %}
+  <article class="error">
+    <p>{{ view.error }}</p>
+    <p class="muted small">Work so far is saved. Retrying continues from the failed step.</p>
+    <button hx-get="/runs/{{ run_id }}/progress?retry=true" hx-target="#progress" hx-swap="outerHTML">Retry</button>
+  </article>
+  {% endif %}
+
+  <details {% if view.status == "running" %}open{% endif %}>
+    <summary>Agent activity ({{ v.log|length }} steps)</summary>
+    <ol class="log">{% for line in v.log %}<li>{{ line }}</li>{% endfor %}</ol>
+  </details>
+
+  {# ---------- choose jobs ---------- #}
+  {% if view.interrupt and view.interrupt.kind == "select" %}
+  {% set it = view.interrupt %}
+  <h3>Choose up to {{ it.limit }} jobs</h3>
+  {% if not it.shortlist %}<p>No eligible matches found.</p>{% endif %}
+  <form method="post" action="/runs/{{ run_id }}/select">
+    {% for job in it.shortlist %}
+    <article class="job">
+      <label class="pick">
+        <input type="checkbox" name="job_ids" value="{{ job.job_id }}">
+        <span><strong>{{ job.title }}</strong> · {{ job.company }}</span>
+        <span class="score">{{ job.match_score }}</span>
+      </label>
+      <p class="muted small">{{ job.location }} · {{ job.salary }} · eligible: {{ job.eligible }}
+        · <a href="{{ job.url }}" target="_blank">posting</a></p>
+      <p>{{ job.summary }}</p>
+      <p class="small"><strong>Location rule:</strong> {{ job.location_constraint }}</p>
+      <p class="small"><strong>Matches:</strong>
+        {% for f in job.matched_fact_ids %}<sup class="cite" title="{{ facts.get(f) }}">{{ f }}</sup>{% endfor %}
+        {% if job.gaps %}<br><strong>Gaps:</strong> {{ job.gaps|join("; ") }}{% endif %}</p>
+    </article>
+    {% endfor %}
+    <button type="submit">Prepare applications for the selected jobs</button>
+  </form>
+  {% if it.excluded %}
+  <details>
+    <summary>Excluded by the researcher ({{ it.excluded|length }})</summary>
+    <ul>{% for job in it.excluded %}
+      <li><a href="{{ job.url }}" target="_blank">{{ job.title }}</a> · {{ job.company }}:
+        {% if job.eligible == "no" %}{{ job.eligibility_reason }}{% else %}level doesn't match{% endif %}</li>
+    {% endfor %}</ul>
+  </details>
+  {% endif %}
+  {% endif %}
+
+  {# ---------- approve drafts ---------- #}
+  {% if view.interrupt and view.interrupt.kind == "approve" %}
+  {% set it = view.interrupt %}
+  <h3>Review and approve</h3>
+  <p class="muted">Hover a citation to see the fact (F) or company quote (E) behind each sentence.</p>
+  <form method="post" action="/runs/{{ run_id }}/approve">
+    {% for jid in it.selected %}
+    {% set app = it.apps[jid] %}{% set job = world.job(jid) %}{% set company = world.company(job.company_id) %}
+    {% set d = app.draft %}{% set r = app.review %}
+    <article class="draft">
+      <header>
+        <label class="pick">
+          <input type="checkbox" name="job_ids" value="{{ jid }}" {% if r.ready %}checked{% endif %}>
+          <span><strong>{{ job.title }}</strong> · {{ company.name }}</span>
+          {% if r.ready %}<ins class="badge">ready</ins>{% else %}<del class="badge">needs attention</del>{% endif %}
+        </label>
+      </header>
+      <p class="small"><strong>Reviewer:</strong> {{ r.summary }}
+        {% if app.revisions %}<span class="muted">(revised {{ app.revisions }}×)</span>{% endif %}</p>
+      {% if not r.ready %}
+      <ul class="small issues">
+        {% for c in r.unsupported_claims %}<li>Unsupported: “{{ c.claim }}”: {{ c.problem }}</li>{% endfor %}
+        {% for c in r.code_issues %}<li>{{ c }}</li>{% endfor %}
+        {% for m in r.missing_requirements %}<li>Missing: {{ m }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+
+      <details open>
+        <summary>Résumé</summary>
+        <p>{{ d.resume_summary.text }}{{ cite(d.resume_summary, app.brief) }}</p>
+        <ul>{% for b in d.resume_bullets %}<li>{{ b.text }}{{ cite(b, app.brief) }}</li>{% endfor %}</ul>
+      </details>
+      <details>
+        <summary>Cover letter</summary>
+        {% for p in d.cover_letter %}<p>{{ p.text }}{{ cite(p, app.brief) }}</p>{% endfor %}
+      </details>
+      {% if d.screening_answers %}
+      <details>
+        <summary>Application questions</summary>
+        {% for a in d.screening_answers %}<p><strong>{{ a.question }}</strong><br>{{ a.answer.text }}{{ cite(a.answer, app.brief) }}</p>{% endfor %}
+      </details>
+      {% endif %}
+      <details>
+        <summary>Company brief</summary>
+        <p>{{ app.brief.overview }}</p><p>{{ app.brief.role_context }}</p>
+        <ul class="small">{% for e in app.brief.evidence %}<li><code>{{ e.id }}</code> “{{ e.quote }}” <span class="muted">({{ e.source }})</span></li>{% endfor %}</ul>
+        {% if app.brief_issues %}<p class="small muted">Removed as unverifiable: {{ app.brief_issues|join(" ") }}</p>{% endif %}
+      </details>
+      <p class="muted small">Applies via: {{ "portal" if job.apply.method == "portal" else "email (manual handoff)" }}</p>
+    </article>
+    {% endfor %}
+    <button type="submit">Submit approved applications</button>
+  </form>
+  {% endif %}
+
+  {# ---------- results ---------- #}
+  {% if view.status == "done" %}
+  <h3>Results</h3>
+  <table>
+    <thead><tr><th>Job</th><th>Outcome</th><th>Details</th></tr></thead>
+    <tbody>
+    {% for jid, app in v.apps.items() if app.submission %}
+      {% set job = world.job(jid) %}{% set s = app.submission %}
+      <tr>
+        <td>{{ job.title }} · {{ world.company(job.company_id).name }}</td>
+        <td>{{ status_badge(s.status) }}{% if s.confirmation_id %}<br><code>{{ s.confirmation_id }}</code>{% endif %}</td>
+        <td class="small">{{ s.detail }}{% if s.attempts > 1 %} ({{ s.attempts }} attempts){% endif %}
+          {% if s.handoff %}
+          <details><summary>Manual handoff package</summary>
+            <p><strong>{{ s.handoff.how_to_apply }}</strong> · Subject: {{ s.handoff.subject }}</p>
+            <pre>{{ s.handoff.cover_letter }}</pre>
+            <pre>{{ s.handoff.resume }}</pre>
+          </details>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if v.next_steps %}
+  <h4>Next steps</h4>
+  <ul>{% for s in v.next_steps %}<li>{{ s }}</li>{% endfor %}</ul>
+  {% endif %}
+  <p><a href="/tracker">Open the tracker</a> · <a href="/portal">See what reached the portal</a></p>
+  {% endif %}
+
+  {% if view.status == "cancelled" %}
+  <p>Nothing was submitted. <a href="/">Start a new search</a></p>
+  {% endif %}
+
+  <p class="muted small">LLM this session: {{ usage.calls }} calls ({{ usage.cached }} cached), {{ usage.tokens_in }} in / {{ usage.tokens_out }} out tokens.</p>
+</div>

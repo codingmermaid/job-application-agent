@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Tracker · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Application tracker</h2>
+{% if not apps %}<p class="muted">Nothing tracked yet.</p>{% endif %}
+<table>
+  <thead><tr><th>Job</th><th>Status</th><th>Run</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for a in apps %}
+    <tr>
+      <td>{{ a.title }} · {{ a.company }}
+        <details class="small"><summary>History</summary>
+          <ol>{% for e in history[a.id] %}<li>{{ e.at.strftime("%H:%M:%S") }} {{ e.status }}{% if e.detail %}: {{ e.detail }}{% endif %}</li>{% endfor %}</ol>
+        </details>
+      </td>
+      <td>{{ status_badge(a.status) }}{% if a.confirmation_id %}<br><code>{{ a.confirmation_id }}</code>{% endif %}</td>
+      <td><a href="/runs/{{ a.run_id }}">{{ a.run_id }}</a></td>
+      <td class="nowrap">{{ a.updated_at.strftime("%d %b %H:%M") }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

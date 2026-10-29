@@ -1,0 +1,10 @@
+{% macro cite(claim, brief) -%}
+  {%- set quotes = {} -%}
+  {%- for e in brief.evidence %}{% set _ = quotes.update({e.id: e.quote}) %}{% endfor -%}
+  {%- for f in claim.fact_ids %}<sup class="cite" title="{{ facts.get(f, 'Unknown fact') }}">{{ f }}</sup>{% endfor -%}
+  {%- for e in claim.evidence_ids %}<sup class="cite ev" title="{{ quotes.get(e, 'Unknown evidence') }}">{{ e }}</sup>{% endfor -%}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+  <span class="badge badge-{{ status }}">{{ status }}</span>
+{%- endmacro %}

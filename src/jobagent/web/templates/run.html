@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Run {{ view.run_id }} · Job Application Agents{% endblock %}
+{% block content %}
+<hgroup>
+  <h2>Run {{ view.run_id }}</h2>
+  <p>{{ view.state.request }}</p>
+</hgroup>
+{% include "_progress.html" %}
+{% endblock %}

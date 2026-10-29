@@ -1,0 +1,30 @@
+:root { --pico-font-size: 100%; }
+.muted { color: var(--pico-muted-color); }
+.small { font-size: 0.875rem; }
+.nowrap { white-space: nowrap; }
+.prewrap { white-space: pre-wrap; }
+.brand { text-decoration: none; }
+footer { margin-top: 2rem; font-size: 0.8rem; }
+
+.cite {
+  display: inline-block; margin-left: 2px; padding: 0 4px; border-radius: 4px;
+  font-size: 0.65rem; line-height: 1.4; cursor: help;
+  background: color-mix(in srgb, var(--pico-primary) 18%, transparent); color: var(--pico-primary);
+}
+.cite.ev { background: color-mix(in srgb, #d97706 20%, transparent); color: #d97706; }
+
+.pick { display: flex; align-items: center; gap: 0.6rem; margin: 0; }
+.pick input { margin: 0; }
+.score { margin-left: auto; font-weight: 700; font-size: 1.1rem; }
+.job, .draft { margin-bottom: 1rem; }
+.issues li { color: var(--pico-del-color); }
+.log { font-size: 0.875rem; }
+.facts { font-size: 0.875rem; }
+pre { white-space: pre-wrap; font-size: 0.8rem; padding: 0.75rem; }
+.error { border-left: 4px solid var(--pico-del-color); }
+
+.badge { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 0.75rem; text-decoration: none; }
+.badge-submitted, .badge-approved { background: color-mix(in srgb, #16a34a 22%, transparent); }
+.badge-handoff, .badge-reviewed, .badge-drafted, .badge-selected, .badge-shortlisted { background: color-mix(in srgb, #2563eb 20%, transparent); }
+.badge-failed { background: color-mix(in srgb, #dc2626 25%, transparent); }
+.badge-skipped { background: color-mix(in srgb, #6b7280 25%, transparent); }
