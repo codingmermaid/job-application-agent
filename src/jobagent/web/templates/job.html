@@ -1,14 +1,106 @@
 {% extends "base.html" %}
 {% block title %}{{ job.title }} · {{ company.name }}{% endblock %}
 {% block content %}
+<p class="small"><a href="/board">← Job board</a></p>
 <hgroup>
   <h2>{{ job.title }}</h2>
-  <p>{{ company.name }} · {{ job.location }} · {{ job.salary }} · posted {{ job.posted }}</p>
+  <p>{{ company.name }} · <a href="{{ company.website }}" class="muted">{{ company.website.split("//")[1] }}</a></p>
 </hgroup>
-<article><div class="prewrap">{{ job.description }}</div></article>
-<details>
-  <summary>About {{ company.name }}</summary>
-  {% for page, text in company.pages.items() %}<p><strong>{{ page|capitalize }}.</strong> {{ text }}</p>{% endfor %}
-</details>
-<p><a href="/board">Back to the job board</a></p>
+<p class="chips">
+  <span>📍 {{ job.location }}</span>
+  <span>💶 {{ job.salary }}</span>
+  <span>🗓 Posted {{ job.posted }}</span>
+  <span>✉️ {{ "Apply via portal" if job.apply.method == "portal" else "Apply by email" }}</span>
+</p>
+
+<div class="job-layout">
+  <div>
+    <article>
+      <header><strong>About the role</strong></header>
+      {% for b in blocks %}
+        {% if b.type == "heading" %}<h5>{{ b.text }}</h5>
+        {% elif b.type == "list" %}<ul>{% for item in b["items"] %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% else %}<p>{{ b.text }}</p>{% endif %}
+      {% endfor %}
+    </article>
+
+    {% if job.team %}
+    <article>
+      <header><strong>The team</strong></header>
+      <p>{{ job.team }}</p>
+    </article>
+    {% endif %}
+
+    <div class="grid">
+      {% if job.benefits %}
+      <article>
+        <header><strong>Benefits</strong></header>
+        <ul>{% for b in job.benefits %}<li>{{ b }}</li>{% endfor %}</ul>
+      </article>
+      {% endif %}
+      {% if job.interview_process %}
+      <article>
+        <header><strong>Interview process</strong></header>
+        <ol>{% for s in job.interview_process %}<li>{{ s }}</li>{% endfor %}</ol>
+      </article>
+      {% endif %}
+    </div>
+
+    {% if job.apply.questions %}
+    <article>
+      <header><strong>Application questions</strong></header>
+      <ol>{% for q in job.apply.questions %}<li>{{ q }}</li>{% endfor %}</ol>
+    </article>
+    {% endif %}
+  </div>
+
+  <aside>
+    <article>
+      <header><strong>About {{ company.name }}</strong></header>
+      {% for page, text in company.pages.items() %}<p class="small"><strong>{{ page|capitalize }}.</strong> {{ text }}</p>{% endfor %}
+    </article>
+  </aside>
+</div>
+
+{# ---------- agent side panel ---------- #}
+<button class="coach-tab" type="button" onclick="openCoach()"
+        hx-post="/board/jobs/{{ job.id }}/coach" hx-target="#coach-body" hx-indicator="#coach-loading">
+  ✨ Agent{% if has_coaching %} <span class="dot" title="Ready"></span>{% endif %}
+</button>
+
+<aside id="coach-panel" class="coach-panel" aria-hidden="true" aria-label="Your fit for this job">
+  <header class="coach-head">
+    <div>
+      <strong>Your fit for this job</strong><br>
+      <span class="muted small">For {{ candidate.name }}{% if is_sample %} (sample){% endif %} ·
+        <a href="/profile">change profile</a></span>
+    </div>
+    <button type="button" class="close" onclick="closeCoach()" aria-label="Close">✕</button>
+  </header>
+  <div id="coach-loading" class="htmx-indicator">
+    <p aria-busy="true">The fit coach is reading the job and your profile…</p>
+  </div>
+  <div id="coach-body"></div>
+</aside>
+
+<script>
+  function openCoach() {
+    const panel = document.getElementById("coach-panel");
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+  }
+  function closeCoach() {
+    const panel = document.getElementById("coach-panel");
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeCoach(); });
+  function copyText(id, button) {
+    navigator.clipboard.writeText(document.getElementById(id).value).then(() => {
+      const label = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => button.textContent = label, 1500);
+    });
+  }
+</script>
 {% endblock %}

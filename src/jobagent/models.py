@@ -58,6 +58,9 @@ class Job(BaseModel):
     description: str
     apply: ApplyInfo
     portal_behavior: str = "ok"  # how the mock portal reacts; see portal.py
+    team: str = ""
+    benefits: list[str] = Field(default_factory=list)
+    interview_process: list[str] = Field(default_factory=list)
 
     @property
     def url(self) -> str:
