@@ -30,8 +30,8 @@ class Runner:
         with self._guard:
             return self._locks.setdefault(run_id, threading.Lock())
 
-    def start(self, request: str, *, budget_s: float = 0) -> str:
-        state = new_run(request)
+    def start(self, request: str, candidate=None, *, budget_s: float = 0) -> str:
+        state = new_run(request, candidate)
         self._step(state["run_id"], state, budget_s)
         return state["run_id"]
 

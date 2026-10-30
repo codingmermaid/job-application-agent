@@ -5,6 +5,15 @@
   {%- for e in claim.evidence_ids %}<sup class="cite ev" title="{{ quotes.get(e, 'Unknown evidence') }}">{{ e }}</sup>{% endfor -%}
 {%- endmacro %}
 
+{% macro downloads(run_id, job_id) -%}
+  {%- set base = "/runs/" ~ run_id ~ "/apps/" ~ job_id -%}
+  <p class="small downloads">Download:
+    <a href="{{ base }}/resume.docx">Résumé (Word)</a> ·
+    <a href="{{ base }}/cover-letter.docx">Cover letter (Word)</a> ·
+    <a href="{{ base }}/resume.txt">Résumé (text)</a> ·
+    <a href="{{ base }}/cover-letter.txt">Cover letter (text)</a></p>
+{%- endmacro %}
+
 {% macro status_badge(status) -%}
   <span class="badge badge-{{ status }}">{{ status }}</span>
 {%- endmacro %}

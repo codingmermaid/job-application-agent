@@ -1,4 +1,4 @@
-{% from "_macros.html" import cite, status_badge %}
+{% from "_macros.html" import cite, status_badge, downloads with context %}
 {% set v = view.state %}
 {% set run_id = view.run_id %}
 <div id="progress"
@@ -109,6 +109,7 @@
         {% if app.brief_issues %}<p class="small muted">Removed as unverifiable: {{ app.brief_issues|join(" ") }}</p>{% endif %}
       </details>
       <p class="muted small">Applies via: {{ "portal" if job.apply.method == "portal" else "email (manual handoff)" }}</p>
+      {{ downloads(run_id, jid) }}
     </article>
     {% endfor %}
     <button type="submit">Submit approved applications</button>
@@ -127,6 +128,7 @@
         <td>{{ job.title }} · {{ world.company(job.company_id).name }}</td>
         <td>{{ status_badge(s.status) }}{% if s.confirmation_id %}<br><code>{{ s.confirmation_id }}</code>{% endif %}</td>
         <td class="small">{{ s.detail }}{% if s.attempts > 1 %} ({{ s.attempts }} attempts){% endif %}
+          {{ downloads(run_id, jid) }}
           {% if s.handoff %}
           <details><summary>Manual handoff package</summary>
             <p><strong>{{ s.handoff.how_to_apply }}</strong> · Subject: {{ s.handoff.subject }}</p>

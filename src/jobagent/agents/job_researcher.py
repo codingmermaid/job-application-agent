@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ..llm import LLMClient
+from ..models import Candidate
 from ..world import World
 from .coordinator import SearchPlan
 
@@ -43,12 +44,14 @@ Rules:
 - List real gaps honestly. Never assume skills the facts don't show."""
 
 
-def research_jobs(llm: LLMClient, world: World, plan: SearchPlan) -> tuple[list[dict], list[dict]]:
+def research_jobs(
+    llm: LLMClient, world: World, plan: SearchPlan, candidate: Candidate | None = None
+) -> tuple[list[dict], list[dict]]:
     """Returns (shortlist, excluded). Each item is a JSON-friendly dict for the graph state."""
     found = world.search_jobs(plan.keywords)
     if not found:
         return [], []
-    candidate = world.candidate
+    candidate = candidate or world.candidate
     postings = "\n\n".join(
         f"### Job {j.id}: {j.title} at {world.company(j.company_id).name}\nListed location: {j.location}\n"
         f"Salary: {j.salary}\n{j.description}"
