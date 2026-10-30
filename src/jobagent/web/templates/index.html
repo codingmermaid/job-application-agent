@@ -2,7 +2,8 @@
 {% block content %}
 <div class="grid">
   <article>
-    <header><strong>Candidate</strong></header>
+    <header><strong>Candidate</strong>
+      {% if is_sample %}<span class="muted small"> · fictional sample</span>{% endif %}</header>
     <h3>{{ candidate.name }}</h3>
     <p class="muted">{{ candidate.location }} · {{ candidate.work_authorization }}</p>
     <p>{{ candidate.headline }}</p>
@@ -11,8 +12,9 @@
       <ul class="facts">
         {% for f in candidate.facts %}<li><code>{{ f.id }}</code> {{ f.text }}</li>{% endfor %}
       </ul>
-      <p class="muted">No experience with: {{ candidate.no_experience_with|join(", ") }}</p>
+      {% if candidate.no_experience_with %}<p class="muted">No experience with: {{ candidate.no_experience_with|join(", ") }}</p>{% endif %}
     </details>
+    <p><a href="/profile" role="button" class="outline">{% if is_sample %}Use your own CV{% else %}Edit your profile{% endif %}</a></p>
   </article>
 
   <article>

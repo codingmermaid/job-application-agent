@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Review your profile · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Review your profile</h2>
+<p>Check every fact. The writer will use only what's here, so remove anything wrong and add anything
+missing. One fact per line.</p>
+<form method="post" action="/profile/save">
+  <div class="grid">
+    <label>Name <input name="name" value="{{ draft.name }}" required></label>
+    <label>Email <input name="email" value="{{ draft.email }}"></label>
+  </div>
+  <div class="grid">
+    <label>Location <input name="location" value="{{ draft.location }}" placeholder="City, Country"></label>
+    <label>Country you work from <input name="country" value="{{ draft.country }}"></label>
+  </div>
+  <div class="grid">
+    <label>Work authorization
+      <input name="work_authorization" value="{{ draft.work_authorization if draft.work_authorization != 'Not stated' else '' }}"
+             placeholder="e.g. Serbian citizen, no EU work permit">
+    </label>
+    <label>Portfolio, GitHub or LinkedIn <input name="portfolio_url" value="{{ draft.portfolio_url }}"></label>
+  </div>
+  <label>Headline <input name="headline" value="{{ draft.headline }}"></label>
+  <label>Facts (one per line)
+    <textarea name="facts" rows="14" required>{% for f in draft.facts %}{{ f.text }}
+{% endfor %}</textarea>
+  </label>
+  <label>Tools or skills you do <em>not</em> have (comma-separated)
+    <input name="no_experience_with" value="{{ draft.no_experience_with|join(', ') }}" placeholder="e.g. dbt, Airflow, R">
+    <small>The reviewer flags any application that claims these.</small>
+  </label>
+  <button type="submit">Save profile</button>
+  <a href="/profile">Cancel</a>
+</form>
+{% endblock %}

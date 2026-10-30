@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Your profile · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Your profile</h2>
+{% if saved %}<p><ins>Profile saved. New searches will write applications for {{ candidate.name }}.</ins></p>{% endif %}
+{% if error %}<article class="error"><p>{{ error }}</p></article>{% endif %}
+
+<div class="grid">
+  <article>
+    <header><strong>Active profile</strong>
+      {% if is_sample %}<span class="muted small"> · fictional sample</span>{% endif %}</header>
+    <h3>{{ candidate.name }}</h3>
+    <p class="muted">{{ candidate.location }}{% if candidate.email %} · {{ candidate.email }}{% endif %}</p>
+    <p>{{ candidate.headline }}</p>
+    <details>
+      <summary>Verified facts ({{ candidate.facts|length }})</summary>
+      <ul class="facts">{% for f in candidate.facts %}<li><code>{{ f.id }}</code> {{ f.text }}</li>{% endfor %}</ul>
+    </details>
+    <div class="grid">
+      <form method="post" action="/profile/edit"><button type="submit" class="secondary outline">Edit</button></form>
+      {% if not is_sample %}
+      <form method="post" action="/profile/reset"><button type="submit" class="secondary outline">Use the sample again</button></form>
+      {% endif %}
+    </div>
+  </article>
+
+  <article>
+    <header><strong>Use your own CV</strong></header>
+    <form method="post" action="/profile/extract" enctype="multipart/form-data">
+      <label>Upload a CV (PDF, Word or text, up to 2 MB)
+        <input type="file" name="cv_file" accept=".pdf,.docx,.txt,.md">
+      </label>
+      <label>Or paste it
+        <textarea name="cv_text" rows="6" placeholder="Paste your CV text here"></textarea>
+      </label>
+      <button type="submit" onclick="this.setAttribute('aria-busy','true')">Read my CV</button>
+    </form>
+    <p class="small muted">The profile builder agent turns your CV into a list of facts. You review and edit
+      them before saving. The writer may only use these facts, so it can't invent experience.</p>
+    <p class="small muted"><strong>Privacy:</strong> your CV text is sent to Google's Gemini API. On the free
+      tier, Google may use it to improve its products. Your profile is stored only in this app's local
+      database. Consider removing your phone number and home address first.</p>
+  </article>
+</div>
+{% endblock %}

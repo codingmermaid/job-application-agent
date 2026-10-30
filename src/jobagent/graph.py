@@ -23,6 +23,7 @@ from .agents.reviewer import review_application
 from .agents.submission import submit_application
 from .agents.writer import write_application
 from .llm import LLMClient
+from .models import Candidate
 from .portal import MockPortal
 from .tracker import Tracker
 from .world import World
@@ -33,6 +34,7 @@ MAX_REVISIONS = 1
 class RunState(TypedDict, total=False):
     run_id: str
     request: str
+    candidate: dict  # snapshot of the profile at the start, so later edits never change a run
     plan: dict
     shortlist: list[dict]
     excluded: list[dict]
@@ -43,8 +45,12 @@ class RunState(TypedDict, total=False):
     log: Annotated[list[str], operator.add]
 
 
-def new_run(request: str, run_id: str | None = None) -> RunState:
-    return {"run_id": run_id or uuid.uuid4().hex[:8], "request": request, "apps": {}, "status": "running", "log": []}
+def new_run(request: str, candidate: Candidate | None = None, run_id: str | None = None) -> RunState:
+    state: RunState = {"run_id": run_id or uuid.uuid4().hex[:8], "request": request, "apps": {},
+                       "status": "running", "log": []}
+    if candidate is not None:
+        state["candidate"] = candidate.model_dump()
+    return state
 
 
 def next_work(state: RunState) -> str:
@@ -63,7 +69,9 @@ def next_work(state: RunState) -> str:
 
 
 def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Tracker, *, checkpointer=None):
-    candidate = world.candidate
+    def candidate_of(state: RunState) -> Candidate:
+        raw = state.get("candidate")
+        return Candidate.model_validate(raw) if raw else world.candidate
 
     def track(state: RunState, job_id: str, status: str, detail: str = "", confirmation_id: str | None = None):
         job = world.job(job_id)
@@ -74,14 +82,14 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         return next(jid for jid in state["selected"] if condition(state["apps"].get(jid, {})))
 
     def plan(state: RunState) -> dict:
-        p = plan_search(llm, state["request"], candidate)
+        p = plan_search(llm, state["request"], candidate_of(state))
         return {"plan": p.model_dump(),
                 "log": [f"Coordinator: searching for {', '.join(p.keywords)} ({p.seniority}, remote only: {p.remote_only})"]}
 
     def research(state: RunState) -> dict:
         from .agents.coordinator import SearchPlan
 
-        shortlist, excluded = research_jobs(llm, world, SearchPlan.model_validate(state["plan"]))
+        shortlist, excluded = research_jobs(llm, world, SearchPlan.model_validate(state["plan"]), candidate_of(state))
         for item in shortlist:
             track(state, item["job_id"], "shortlisted", f"Match {item['match_score']}: {item['summary']}")
         return {"shortlist": shortlist, "excluded": excluded,
@@ -119,7 +127,7 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         assessment = next(i for i in state["shortlist"] if i["job_id"] == jid)
         revising = bool(app.get("rewrite"))
         draft = write_application(
-            llm, candidate, job, company, assessment, app["brief"],
+            llm, candidate_of(state), job, company, assessment, app["brief"],
             corrections=app["review"]["corrections"] if revising else None,
             previous=app["draft"] if revising else None,
         )
@@ -135,7 +143,7 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         app = state["apps"][jid]
         job = world.job(jid)
         company = world.company(job.company_id).name
-        result = review_application(llm, candidate, job, company, app["brief"], app["draft"])
+        result = review_application(llm, candidate_of(state), job, company, app["brief"], app["draft"])
         rewrite = not result["ready"] and app["revisions"] < MAX_REVISIONS
         track(state, jid, "reviewed", "Ready" if result["ready"] else f"{len(result['corrections'])} correction(s)")
         verdict = "ready" if result["ready"] else ("sent back for revision" if rewrite else "not ready; you decide")
@@ -163,7 +171,7 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         jid = next(j for j in state["selected"] if state["apps"][j].get("approved") and "submission" not in state["apps"][j])
         job = world.job(jid)
         company = world.company(job.company_id).name
-        result = submit_application(portal, candidate, job, company, state["apps"][jid]["draft"])
+        result = submit_application(portal, candidate_of(state), job, company, state["apps"][jid]["draft"])
         track(state, jid, result.status, result.detail, result.confirmation_id)
         apps = {**state["apps"], jid: {**state["apps"][jid], "submission": result.model_dump()}}
         return {"apps": apps, "log": [f"Submission agent: {job.title} at {company}: {result.status}. {result.detail}"]}

@@ -23,6 +23,7 @@ companies, jobs, the candidate and the portal are fictional.
 | **Application writer** | Tailors résumé wording, writes the cover letter and answers questions | Drafts where every sentence cites candidate facts | 1 call per job (+1 per revision) |
 | **Reviewer** | Checks accuracy, relevance, missing requirements and unsupported claims | Corrections and a ready / not ready verdict | 1 call per job + code checks |
 | **Submission** | Fills portal fields, submits approved applications, verifies, records | Confirmation, or a manual handoff package | No LLM |
+| **Profile builder** | Turns your uploaded CV into the verified facts every application cites | Numbered facts for you to review and edit | 1 call per CV |
 
 ## Workflow
 
@@ -114,6 +115,23 @@ Open http://localhost:8610:
 5. See the **results**, then the **Tracker** (every application's history) and the **Portal** (what
    actually arrived, one row per application).
 
+### Use your own CV
+
+Open **Your profile**, upload a CV (PDF, Word or text) or paste it, and click **Read my CV**. The
+profile builder agent extracts your experience as numbered facts, and you review and edit them before
+saving. List tools you *don't* have, so the reviewer flags any application that claims them. New runs
+then write applications for you. Each run keeps a snapshot of the profile it started with.
+
+Privacy: your CV text is sent to Google's Gemini API, and on the free tier Google may use it to improve
+its products. The profile is stored only in the app's local database (`var/`, ignored by git).
+Consider removing your phone number and home address first.
+
+### Download your applications
+
+Every drafted application has download links for the tailored **résumé** and **cover letter**, as Word
+(`.docx`) or plain text, on the approval screen and in the results. Use them to apply for real jobs
+yourself.
+
 A full run makes about 12–15 Gemini calls and takes one to two minutes, because calls are paced to
 stay under the free tier's rate limits.
 
@@ -154,6 +172,8 @@ The app is designed so the next step, hosting it, needs little change:
 | `src/jobagent/tracker.py` | Application tracker and run history |
 | `src/jobagent/llm.py` | Gemini client: pacing, retries, fallback, cache, usage records |
 | `src/jobagent/web/` | FastAPI app, Jinja + HTMX templates |
+| `src/jobagent/profiles.py` | The active profile: yours once saved, otherwise the sample |
+| `src/jobagent/documents.py` | Reading uploaded CVs; Word and text downloads |
 | `tests/` | Workflow, agent and web tests |
 
 ## Tests
