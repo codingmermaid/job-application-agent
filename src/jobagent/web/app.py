@@ -16,18 +16,42 @@ from fastapi.templating import Jinja2Templates
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from .. import documents
+from ..agents.fit_coach import coach, cover_letter_text
 from ..agents.profile_builder import build_candidate, extract_profile
 from ..db import data_dir, make_engine
 from ..graph import build_graph
 from ..llm import LLMClient, make_llm
 from ..models import Candidate
 from ..portal import MockPortal
-from ..profiles import ProfileStore
+from ..profiles import CoachingCache, ProfileStore
 from ..runner import Runner
 from ..tracker import Tracker
 from ..world import World, default_world
 
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def description_blocks(text: str) -> list[dict]:
+    """Split a posting into headings, paragraphs and bullet lists for display."""
+    blocks: list[dict] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            if not blocks or blocks[-1]["type"] != "list":
+                blocks.append({"type": "list", "items": []})
+            blocks[-1]["items"].append(line[2:])
+        elif line.endswith(":") and len(line) < 40:
+            blocks.append({"type": "heading", "text": line[:-1]})
+        elif ":" in line[:20] and line.split(":", 1)[0] in ("Location", "How to apply"):
+            label, rest = line.split(":", 1)
+            blocks.append({"type": "heading", "text": label})
+            rest = rest.strip()
+            blocks.append({"type": "text", "text": rest[:1].upper() + rest[1:]})
+        else:
+            blocks.append({"type": "text", "text": line})
+    return blocks
 
 
 def content_disposition(filename: str) -> str:
@@ -52,12 +76,15 @@ def create_app(world: World | None = None, llm: LLMClient | None = None, engine=
     portal = MockPortal(engine, {j.id: j.portal_behavior for j in world.jobs.values()})
     tracker = Tracker(engine)
     profiles = ProfileStore(engine, world.candidate)
+    coaching = CoachingCache(engine)
     runner = Runner(build_graph(world, llm, portal, tracker, checkpointer=checkpointer))
 
     app = FastAPI(title="Job Application Agents")
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
-    templates.env.globals.update(world=world)
+    # Changes whenever the stylesheet changes, so browsers never keep an old copy.
+    static_version = int((HERE / "static" / "style.css").stat().st_mtime)
+    templates.env.globals.update(world=world, static_version=static_version)
     app.state.runner, app.state.tracker, app.state.portal, app.state.llm = runner, tracker, portal, llm
 
     def render(request: Request, name: str, **context) -> HTMLResponse:
@@ -188,7 +215,42 @@ def create_app(world: World | None = None, llm: LLMClient | None = None, engine=
         if job_id not in world.jobs:
             raise HTTPException(404, "No such job")
         job = world.job(job_id)
-        return render(request, "job.html", job=job, company=world.company(job.company_id))
+        candidate = profiles.get()
+        return render(request, "job.html", job=job, company=world.company(job.company_id),
+                      blocks=description_blocks(job.description), candidate=candidate,
+                      is_sample=profiles.is_sample(), has_coaching=coaching.get(candidate.id, job_id) is not None)
+
+    @app.post("/board/jobs/{job_id}/coach", response_class=HTMLResponse)
+    def job_coach(request: Request, job_id: str, regenerate: bool = False):
+        if job_id not in world.jobs:
+            raise HTTPException(404, "No such job")
+        job, candidate = world.job(job_id), profiles.get()
+        company = world.company(job.company_id)
+        fit, error = (None if regenerate else coaching.get(candidate.id, job_id)), None
+        if fit is None:
+            try:
+                fit = coach(llm, candidate, job, company)
+                coaching.put(candidate.id, job_id, fit)
+            except Exception as exc:  # e.g. Gemini unavailable
+                error = str(exc)
+        return render(request, "_coach.html", job=job, company=company, candidate=candidate, fit=fit,
+                      error=error, facts=candidate.fact_map(),
+                      letter=cover_letter_text(candidate, fit) if fit else "")
+
+    @app.get("/board/jobs/{job_id}/coach/cover-letter.{fmt}")
+    def job_coach_letter(job_id: str, fmt: str):
+        candidate = profiles.get()
+        fit = coaching.get(candidate.id, job_id) if job_id in world.jobs else None
+        if fit is None or fmt not in ("docx", "txt"):
+            raise HTTPException(404, "No cover letter yet. Open the agent panel on the job page first.")
+        company = world.company(world.job(job_id).company_id).name.replace("&", "and").replace(" ", "-")
+        filename = f"{candidate.name.replace(' ', '-')}-cover-letter-{company}.{fmt}"
+        text = cover_letter_text(candidate, fit)
+        if fmt == "docx":
+            content, media = documents.text_docx(text), DOCX
+        else:
+            content, media = text.encode("utf-8"), "text/plain; charset=utf-8"
+        return Response(content, media_type=media, headers={"Content-Disposition": content_disposition(filename)})
 
     @app.get("/tracker", response_class=HTMLResponse)
     def tracker_page(request: Request):

@@ -24,6 +24,7 @@ companies, jobs, the candidate and the portal are fictional.
 | **Reviewer** | Checks accuracy, relevance, missing requirements and unsupported claims | Corrections and a ready / not ready verdict | 1 call per job + code checks |
 | **Submission** | Fills portal fields, submits approved applications, verifies, records | Confirmation, or a manual handoff package | No LLM |
 | **Profile builder** | Turns your uploaded CV into the verified facts every application cites | Numbered facts for you to review and edit | 1 call per CV |
+| **Fit coach** | On any job page: how you stand out, CV adjustments and a sample cover letter | Side panel, cached per profile and job | 1 call per job |
 
 ## Workflow
 
@@ -125,6 +126,18 @@ then write applications for you. Each run keeps a snapshot of the profile it sta
 Privacy: your CV text is sent to Google's Gemini API, and on the free tier Google may use it to improve
 its products. The profile is stored only in the app's local database (`var/`, ignored by git).
 Consider removing your phone number and home address first.
+
+### Ask the agent about any job
+
+Open a posting from the **Job board** and click **✨ Agent** on the right. A side panel opens with:
+- **How you stand out:** a fit score, a summary, your strongest points and honest gaps;
+- **CV adjustments:** what to emphasise, rewritten bullet points, and keywords from the posting you
+  genuinely have;
+- **A sample cover letter**, with Copy, Word and Text buttons.
+
+Every point cites your facts (hover to see them). Plain code removes anything that cites a fact that
+doesn't exist, claims a tool you don't have, or lists a keyword your facts don't show. Results are
+cached for your profile, so reopening is instant and free; **Regenerate** asks for a fresh version.
 
 ### Download your applications
 

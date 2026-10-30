@@ -1,0 +1,62 @@
+{% macro fact_chips(ids) -%}
+  {%- for f in ids %}<sup class="cite" title="{{ facts.get(f, 'Unknown fact') }}">{{ f }}</sup>{% endfor -%}
+{%- endmacro %}
+
+{% if error %}
+<article class="error">
+  <p>The fit coach couldn't finish: {{ error }}</p>
+  <button hx-post="/board/jobs/{{ job.id }}/coach" hx-target="#coach-body" hx-indicator="#coach-loading">Try again</button>
+</article>
+{% elif fit %}
+
+<section>
+  <div class="fit-score">
+    <span class="score-ring" style="--score: {{ fit.match_score }}">{{ fit.match_score }}</span>
+    <p>{{ fit.fit_summary }}</p>
+  </div>
+</section>
+
+<section>
+  <h5>How you stand out</h5>
+  <ul>{% for s in fit.strengths %}<li>{{ s.point }}{{ fact_chips(s.fact_ids) }}</li>{% endfor %}</ul>
+  {% if fit.gaps %}
+  <h6>Gaps to address</h6>
+  <ul class="small">{% for g in fit.gaps %}<li>{{ g }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+<section>
+  <h5>CV adjustments</h5>
+  {% for e in fit.cv_edits %}
+  <div class="cv-edit">
+    <p class="small"><strong>{{ e.suggestion }}</strong></p>
+    <blockquote>{{ e.rewritten_bullet }}{{ fact_chips(e.fact_ids) }}</blockquote>
+  </div>
+  {% endfor %}
+  {% if fit.keywords %}
+  <p class="small"><strong>Keywords to use:</strong></p>
+  <p class="chips">{% for k in fit.keywords %}<span>{{ k }}</span>{% endfor %}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h5>Sample cover letter</h5>
+  {% for p in fit.cover_letter %}
+  <p>{{ p.text }}{{ fact_chips(p.fact_ids) }}{% for s in p.source_ids %}<sup class="cite ev" title="{{ company.pages.get(s.split('/')[-1], '') }}">{{ s.split('/')[-1] }}</sup>{% endfor %}</p>
+  {% endfor %}
+  <p>Best regards,<br>{{ candidate.name }}</p>
+  <textarea id="coach-letter" hidden>{{ letter }}</textarea>
+  <div class="actions">
+    <button type="button" class="secondary" onclick="copyText('coach-letter', this)">Copy</button>
+    <a role="button" class="secondary outline" href="/board/jobs/{{ job.id }}/coach/cover-letter.docx">Word</a>
+    <a role="button" class="secondary outline" href="/board/jobs/{{ job.id }}/coach/cover-letter.txt">Text</a>
+  </div>
+</section>
+
+{% if fit.removed %}
+<p class="small muted">Removed by the fact check: {{ fit.removed|join(" ") }}</p>
+{% endif %}
+<p class="small muted">Hover a citation to see the fact behind it. Every point comes from your verified profile.
+  <a href="#" hx-post="/board/jobs/{{ job.id }}/coach?regenerate=true" hx-target="#coach-body"
+     hx-indicator="#coach-loading">Regenerate</a></p>
+{% endif %}

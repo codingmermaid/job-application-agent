@@ -70,4 +70,9 @@ def resume_docx(candidate: Candidate, draft: dict) -> bytes:
 
 
 def cover_letter_docx(candidate: Candidate, draft: dict) -> bytes:
-    return _docx([p for p in render_cover_letter(candidate, draft).split("\n\n") if p.strip()])
+    return text_docx(render_cover_letter(candidate, draft))
+
+
+def text_docx(text: str) -> bytes:
+    """A Word document with one paragraph per blank-line-separated block."""
+    return _docx([p for p in text.split("\n\n") if p.strip()])
