@@ -50,13 +50,15 @@ class Instance:
     """One function instance: a fresh process with an empty data directory."""
     counter = itertools.count(1)
 
+    module = "api.index:app"
+
     def __init__(self, env: dict):
         self.id = next(self.counter)
         self.port = free_port()
         self.tmp = tempfile.mkdtemp(prefix=f"fn{self.id}-")
         started = time.monotonic()
         self.proc = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "api.index:app", "--port", str(self.port), "--log-level", "warning"],
+            [sys.executable, "-m", "uvicorn", self.module, "--port", str(self.port), "--log-level", "warning"],
             cwd=ROOT, env={**env, "JOBAGENT_DATA_DIR": self.tmp}, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         while True:  # a cold start lasts until the app answers
             try:
@@ -122,8 +124,10 @@ class Platform:
             r = httpx.request(method, inst.url + path, headers=self.auth, timeout=MAX_DURATION_S,
                               follow_redirects=False, **kwargs)
             status = r.status_code
-        except httpx.TimeoutException:
+        except httpx.TimeoutException:  # Vercel stops the function at maxDuration, freeing its DB connection
             r, status, error = None, 504, "FUNCTION_INVOCATION_TIMEOUT"
+            if killer is None:
+                self.recycle(index, "killed at the time limit")
         except httpx.HTTPError as exc:
             r, status, error = None, 502, f"instance died: {type(exc).__name__}"
         if killer is not None:
@@ -139,13 +143,18 @@ class Platform:
             inst.kill()
 
 
-def drive_run(p: Platform, crash_on_poll: int) -> dict:
+def drive_run(p: Platform, crash_on_poll: int, deadline_s: float = 1800) -> dict:
     """Behave like the browser: start a run, poll, choose jobs, approve, poll until done."""
-    r = p.request("POST", "/runs", data={"request": REQUEST})
+    for _ in range(3):  # a user would press the button again if the first try failed
+        r = p.request("POST", "/runs", data={"request": REQUEST})
+        if r is not None and r.status_code == 303:
+            break
     run_id = r.headers["location"].rsplit("/", 1)[1]
     polls, retries, stage, lock_result = 0, 0, "research", None
     while True:
         polls += 1
+        if time.monotonic() - p.t0 > deadline_s:
+            raise TimeoutError(f"run {run_id} made no finish within {deadline_s:.0f} s after {polls} polls")
         if stage == "selected" and lock_result is None:
             lock_result = lock_check(p, run_id)  # while the agents are busy researching companies
             continue
@@ -164,7 +173,10 @@ def drive_run(p: Platform, crash_on_poll: int) -> dict:
         stage = "running" if stage != "selected" else stage
         if "Choose up to" in html:
             p.log.append({"event": "human", "action": "select", "t": p.now()})
-            p.request("POST", f"/runs/{run_id}/select", data={"job_ids": CHOOSE})
+            offered = re.findall(r'name="job_ids" value="(\w+)"', html)
+            chosen = [j for j in CHOOSE if j in offered] if set(CHOOSE) <= set(offered) else offered[:3]
+            p.log[-1]["chosen"] = chosen
+            p.request("POST", f"/runs/{run_id}/select", data={"job_ids": chosen})
             stage = "selected"
         elif "Review and approve" in html:
             ready = re.findall(r'name="job_ids" value="(\w+)" checked', html)
@@ -201,6 +213,9 @@ def main() -> None:
     ap.add_argument("--recycle-every", type=int, default=7, help="reclaim an instance every N requests")
     ap.add_argument("--crash-on-poll", type=int, default=4, help="kill the instance serving this poll")
     ap.add_argument("--seed", type=int, default=15)
+    ap.add_argument("--stand-in", action="store_true",
+                    help="scripted LLM answers with measured delays (deploy/stand_in.py) instead of live Gemini calls")
+    ap.add_argument("--max-minutes", type=float, default=30, help="give up if the run has not finished by then")
     ap.add_argument("--out", default="deploy-sim.json")
     args = ap.parse_args()
 
@@ -216,9 +231,11 @@ def main() -> None:
     env = {**os.environ, **{k: v for k, v in dotenv_values(ROOT / ".env").items() if v},
            "VERCEL": "1", "DATABASE_URL": url, "APP_PASSWORD": password, "PYTHONPATH": str(ROOT / "src")}
 
+    if args.stand_in:
+        Instance.module = "deploy.stand_in:app"
     p = Platform(env, args.instances, args.recycle_every, password, args.seed)
     try:
-        run = drive_run(p, args.crash_on_poll)
+        run = drive_run(p, args.crash_on_poll, args.max_minutes * 60)
         ops = p.request("GET", "/ops.json").json()
         portal = p.request("GET", "/portal").text
         unauth = httpx.get(p.pool[0].url + "/", timeout=10).status_code
@@ -239,7 +256,7 @@ def main() -> None:
         "max_request_s": max(e["duration_s"] for e in reqs), "limit_s": MAX_DURATION_S,
         "checkpoints_in_postgres": checkpoints,
         "portal_rows_per_job": dict(submissions), "unauthenticated_status": unauth,
-        "submitted": portal.count("APP-"), "ops": ops,
+        "submitted": portal.count("APP-"), "ops": ops, "llm": "stand-in" if args.stand_in else "gemini",
     }
     Path(args.out).write_text(json.dumps({"summary": summary, "log": p.log}, indent=2, default=str), encoding="utf-8")
     print(json.dumps({k: v for k, v in summary.items() if k not in ("ops", "cold_starts", "failed_requests")}, indent=2))

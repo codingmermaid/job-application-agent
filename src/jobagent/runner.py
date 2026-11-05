@@ -29,8 +29,15 @@ class Runner:
         return {"configurable": {"thread_id": run_id}}
 
     def start(self, request: str, candidate=None, *, budget_s: float = 0) -> str:
+        """Save the run's input without doing any work, so starting a run is always instant.
+
+        Doing even one step here would put an LLM call (with its retries) inside the request that
+        starts the run, which can outlast a serverless time limit. The first poll does the work instead.
+        """
         state = new_run(request, candidate)
-        self._step(state["run_id"], state, budget_s)
+        self.graph.update_state(self._config(state["run_id"]), state, as_node="__start__")
+        if budget_s > 0:
+            self._step(state["run_id"], None, budget_s)
         return state["run_id"]
 
     def advance(self, run_id: str, *, budget_s: float = 10, resume: Any = None, retry: bool = False) -> dict:

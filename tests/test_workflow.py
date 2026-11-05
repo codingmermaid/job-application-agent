@@ -112,3 +112,13 @@ def test_a_failing_step_can_be_retried_from_its_checkpoint(world, portal, tracke
     view = run_until_pause(runner, run_id)
     assert view["interrupt"]["kind"] == "select"
     assert [c.agent for c in llm.calls].count("coordinator") == 1  # earlier work was not repeated
+
+
+def test_starting_a_run_is_instant_and_the_first_poll_does_the_work(world, portal, tracker, scripted_responses):
+    runner, llm = make_runner(world, portal, tracker, scripted_responses)
+    run_id = runner.start("junior data analyst")
+    assert llm.calls == []  # no LLM call inside the request that starts the run
+    view = runner.view(run_id)
+    assert view["status"] == "running" and view["state"]["request"] == "junior data analyst"
+    runner.advance(run_id, budget_s=0)
+    assert [c.agent for c in llm.calls] == ["coordinator"]
