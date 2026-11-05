@@ -13,6 +13,8 @@ companies, jobs, the candidate and the portal are fictional.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue) ![LangGraph](https://img.shields.io/badge/LangGraph-1.x-1c3c3c) ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688) ![Gemini free tier](https://img.shields.io/badge/LLM-Gemini%20free%20tier-4285f4)
 
+![Reviewing drafts: every sentence cites the candidate facts (F) or company quotes (E) behind it](docs/images/review.png)
+
 ## The agents
 
 | Agent | Responsibility | Output | LLM? |
@@ -27,6 +29,8 @@ companies, jobs, the candidate and the portal are fictional.
 | **Fit coach** | On any job page: how you stand out, CV adjustments and a sample cover letter | Side panel, cached per profile and job | 1 call per job |
 
 ## Workflow
+
+![The coordinator's workflow: agents, human checkpoints and plain-code steps](docs/images/architecture.png)
 
 ```
 plan -> research_jobs -> [you choose jobs]
@@ -81,6 +85,16 @@ The mock portal fails on purpose to prove this:
 - Submitted one application with a verified confirmation, and turned one portal rejection into a
   manual handoff.
 - About 15 LLM calls and 23,000 tokens in total.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/shortlist.png" alt="Shortlist with fit scores, location rules, matched facts and gaps"><br><sub><b>Shortlist.</b> Fit scores, the posting's location rule, matched facts and honest gaps.</sub></td>
+<td width="50%"><img src="docs/images/results.png" alt="Results: one verified submission and one manual handoff"><br><sub><b>Results.</b> One submission verified with the portal; a rejection becomes a manual handoff.</sub></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/images/tracker.png" alt="Application tracker"><br><sub><b>Tracker.</b> Every application's status and history across runs.</sub></td>
+</tr>
+</table>
 
 ## Quick start
 
