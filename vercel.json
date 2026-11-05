@@ -6,5 +6,5 @@
       "includeFiles": "{src,data}/**"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index?__path=/$1" }]
 }
