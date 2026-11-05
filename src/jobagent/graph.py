@@ -68,7 +68,10 @@ def next_work(state: RunState) -> str:
     return "approve"
 
 
-def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Tracker, *, checkpointer=None):
+def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Tracker, *, checkpointer=None,
+                on_alert=None):
+    alert = on_alert or (lambda kind, detail, run_id=None: None)
+
     def candidate_of(state: RunState) -> Candidate:
         raw = state.get("candidate")
         return Candidate.model_validate(raw) if raw else world.candidate
@@ -115,6 +118,9 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         jid = first(state, lambda a: "brief" not in a)
         job = world.job(jid)
         brief, issues = research_company(llm, world.company(job.company_id), job)
+        for issue in issues:
+            if issue.startswith("Guardrail:"):
+                alert("guardrail", issue, state["run_id"])
         apps = {**state["apps"], jid: {**state["apps"][jid], "brief": brief, "brief_issues": issues}}
         note = f" ({len(issues)} unverifiable item(s) removed)" if issues else ""
         return {"apps": apps, "log": [f"Company researcher: briefed {world.company(job.company_id).name}{note}"]}
@@ -143,8 +149,12 @@ def build_graph(world: World, llm: LLMClient, portal: MockPortal, tracker: Track
         app = state["apps"][jid]
         job = world.job(jid)
         company = world.company(job.company_id).name
-        result = review_application(llm, candidate_of(state), job, company, app["brief"], app["draft"])
+        result = review_application(llm, candidate_of(state), job, company, app["brief"], app["draft"],
+                                    world.company(job.company_id).website)
         rewrite = not result["ready"] and app["revisions"] < MAX_REVISIONS
+        for issue in result["code_issues"]:
+            if "not the candidate" in issue or "reads like an instruction" in issue:
+                alert("guardrail", f"{job.id}: {issue}", state["run_id"])
         track(state, jid, "reviewed", "Ready" if result["ready"] else f"{len(result['corrections'])} correction(s)")
         verdict = "ready" if result["ready"] else ("sent back for revision" if rewrite else "not ready; you decide")
         return {"apps": {**state["apps"], jid: {**app, "review": result, "rewrite": rewrite}},

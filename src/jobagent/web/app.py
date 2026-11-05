@@ -4,13 +4,17 @@ The app instance lives in main.py:  .venv\\Scripts\\uvicorn.exe jobagent.web.mai
 """
 from __future__ import annotations
 
+import base64
+import hmac
+import os
 import sqlite3
 import unicodedata
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -18,10 +22,12 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from .. import documents
 from ..agents.fit_coach import coach, cover_letter_text
 from ..agents.profile_builder import build_candidate, extract_profile
-from ..db import data_dir, make_engine
+from ..db import data_dir, database_url, is_postgres, libpq_url, make_engine, on_serverless
 from ..graph import build_graph
+from ..guardrails import screen_request
 from ..llm import LLMClient, make_llm
 from ..models import Candidate
+from ..ops import OpsStore, RecordingLLM
 from ..portal import MockPortal
 from ..profiles import CoachingCache, ProfileStore
 from ..runner import Runner
@@ -65,27 +71,82 @@ EXAMPLE_REQUEST = (
     "matches, and prepare applications for the three I choose."
 )
 POLL_BUDGET_S = 8  # work done per browser poll; keeps each request short
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+    "Content-Security-Policy": (
+        "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:; frame-ancestors 'none'"
+    ),
+}
 
 
-def create_app(world: World | None = None, llm: LLMClient | None = None, engine=None, checkpointer=None) -> FastAPI:
+def make_checkpointer(url: str | None = None):
+    """Postgres when DATABASE_URL points at one (needed on serverless), else a local SQLite file."""
+    url = url or database_url()
+    if is_postgres(url):
+        from langgraph.checkpoint.postgres import PostgresSaver
+        from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool
+
+        pool = ConnectionPool(libpq_url(url), min_size=0, max_size=4, open=True,
+                              kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row})
+        saver = PostgresSaver(pool)
+        saver.setup()  # creates the checkpoint tables once; safe to call on every cold start
+        return saver
+    return SqliteSaver(sqlite3.connect(data_dir() / "checkpoints.db", check_same_thread=False))
+
+
+def check_password(header: str | None, password: str) -> bool:
+    """HTTP Basic auth: any user name, the configured password. Compared in constant time."""
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        _, _, given = base64.b64decode(header[6:]).decode("utf-8").partition(":")
+    except Exception:
+        return False
+    return hmac.compare_digest(given.encode(), password.encode())
+
+
+def create_app(world: World | None = None, llm: LLMClient | None = None, engine=None, checkpointer=None,
+               password: str | None = None, max_runs_per_day: int | None = None) -> FastAPI:
+    password = password if password is not None else os.getenv("APP_PASSWORD", "")
+    if on_serverless() and not password:
+        # Fail closed: a public URL without a password would let anyone spend your API quota.
+        raise RuntimeError("Set APP_PASSWORD before deploying; refusing to serve publicly without it.")
+    if max_runs_per_day is None:
+        max_runs_per_day = int(os.getenv("MAX_RUNS_PER_DAY", "20"))
     world = world or default_world()
     engine = engine or make_engine()
-    llm = llm or make_llm()
+    ops = OpsStore(engine)
+    llm = RecordingLLM(llm or make_llm(), ops)
     if checkpointer is None:
-        checkpointer = SqliteSaver(sqlite3.connect(data_dir() / "checkpoints.db", check_same_thread=False))
+        checkpointer = make_checkpointer()
     portal = MockPortal(engine, {j.id: j.portal_behavior for j in world.jobs.values()})
     tracker = Tracker(engine)
     profiles = ProfileStore(engine, world.candidate)
     coaching = CoachingCache(engine)
-    runner = Runner(build_graph(world, llm, portal, tracker, checkpointer=checkpointer))
+    runner = Runner(build_graph(world, llm, portal, tracker, checkpointer=checkpointer, on_alert=ops.alert), ops)
 
     app = FastAPI(title="Job Application Agents")
+
+    @app.middleware("http")
+    async def guard(request: Request, call_next):
+        if password and request.url.path != "/health" and not check_password(request.headers.get("authorization"), password):
+            return PlainTextResponse("Sign in required", status_code=401,
+                                     headers={"WWW-Authenticate": 'Basic realm="job-agents"'})
+        response = await call_next(request)
+        response.headers.update(SECURITY_HEADERS)
+        return response
+
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     # Changes whenever the stylesheet changes, so browsers never keep an old copy.
     static_version = int((HERE / "static" / "style.css").stat().st_mtime)
     templates.env.globals.update(world=world, static_version=static_version)
     app.state.runner, app.state.tracker, app.state.portal, app.state.llm = runner, tracker, portal, llm
+    app.state.ops = ops
 
     def render(request: Request, name: str, **context) -> HTMLResponse:
         return templates.TemplateResponse(request, name, context)
@@ -106,7 +167,23 @@ def create_app(world: World | None = None, llm: LLMClient | None = None, engine=
 
     @app.get("/health")
     def health() -> dict:
+        tracker.list_runs(limit=1)  # fails (500) if the database is unreachable
         return {"ok": True}
+
+    def runs_today() -> int:
+        since = datetime.now(timezone.utc) - timedelta(days=1)
+        return sum(1 for r in tracker.list_runs(limit=1000) if _aware(r["created_at"]) >= since)
+
+    @app.get("/ops", response_class=HTMLResponse)
+    def ops_page(request: Request, hours: int = 24):
+        return render(request, "ops.html", stats=ops.stats(hours), runs_today=runs_today(),
+                      max_runs=max_runs_per_day, database=engine.dialect.name, serverless=on_serverless())
+
+    @app.get("/ops.json")
+    def ops_json(hours: int = 24) -> dict:
+        stats = ops.stats(hours)
+        stats["recent_alerts"] = [{**a, "at": a["at"].isoformat()} for a in stats["recent_alerts"]]
+        return {**stats, "runs_today": runs_today(), "max_runs_per_day": max_runs_per_day}
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request):
@@ -116,8 +193,14 @@ def create_app(world: World | None = None, llm: LLMClient | None = None, engine=
 
     @app.post("/runs")
     def start_run(request_text: str = Form(..., alias="request")):
-        run_id = runner.start(request_text.strip(), profiles.get())
-        tracker.add_run(run_id, request_text.strip())
+        text, problems = screen_request(request_text)
+        if problems:
+            raise HTTPException(400, " ".join(problems))
+        if runs_today() >= max_runs_per_day:
+            ops.alert("budget", f"Run refused: {max_runs_per_day} runs in the last 24 hours")
+            raise HTTPException(429, f"Daily limit of {max_runs_per_day} runs reached. Try again tomorrow.")
+        run_id = runner.start(text, profiles.get())
+        tracker.add_run(run_id, text)
         return RedirectResponse(f"/runs/{run_id}", status_code=303)
 
     @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -263,3 +346,8 @@ def create_app(world: World | None = None, llm: LLMClient | None = None, engine=
         return render(request, "portal.html", submissions=portal.list_submissions())
 
     return app
+
+
+def _aware(dt: datetime) -> datetime:
+    """SQLite returns naive datetimes even for timezone=True columns; they were stored as UTC."""
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)

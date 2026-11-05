@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Operations · Job Application Agents{% endblock %}
+{% block content %}
+<h2>Operations</h2>
+<p class="muted">Last {{ stats.hours }} hours · database: {{ database }} · {{ "serverless" if serverless else "single server" }}</p>
+<div class="grid">
+  <article><header>LLM calls</header><h3>{{ stats.calls }}</h3><p class="small muted">{{ stats.cached }} from cache · {{ stats.failed }} failed</p></article>
+  <article><header>Tokens</header><h3>{{ "{:,}".format(stats.tokens) }}</h3><p class="small muted">input and output</p></article>
+  <article><header>Error rate</header><h3>{{ "%.0f" | format(stats.error_rate * 100) }}%</h3><p class="small muted">of live calls</p></article>
+  <article><header>Runs today</header><h3>{{ runs_today }} / {{ max_runs }}</h3><p class="small muted">daily cap</p></article>
+</div>
+<h3>By agent</h3>
+<table>
+  <thead><tr><th>Agent</th><th>Calls</th><th>Failed</th><th>Cached</th><th>Tokens</th><th>p50 latency</th><th>p95 latency</th></tr></thead>
+  <tbody>
+  {% for name, a in stats.by_agent.items() %}
+    <tr><td>{{ name.replace("_", " ") }}</td><td>{{ a.calls }}</td><td>{{ a.failed }}</td><td>{{ a.cached }}</td>
+      <td>{{ "{:,}".format(a.tokens) }}</td>
+      <td>{{ "%.1f s" | format(a.p50_s) if a.p50_s is not none else "–" }}</td>
+      <td>{{ "%.1f s" | format(a.p95_s) if a.p95_s is not none else "–" }}</td></tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No calls yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h3>Alerts</h3>
+<p class="small">{% for kind, n in stats.alerts.items() %}<span class="badge">{{ kind }}: {{ n }}</span> {% else %}<span class="muted">None in this period.</span>{% endfor %}</p>
+<table>
+  <thead><tr><th>When</th><th>Kind</th><th>Run</th><th>Detail</th></tr></thead>
+  <tbody>
+  {% for a in stats.recent_alerts %}
+    <tr><td class="nowrap">{{ a.at.strftime("%d %b %H:%M:%S") }}</td><td>{{ a.kind }}</td>
+      <td>{% if a.run_id %}<a href="/runs/{{ a.run_id }}">{{ a.run_id }}</a>{% endif %}</td><td class="small">{{ a.detail }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="small muted">Machine-readable: <a href="/ops.json">/ops.json</a> · liveness: <a href="/health">/health</a></p>
+{% endblock %}

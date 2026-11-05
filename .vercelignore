@@ -1,0 +1,12 @@
+# Never upload secrets or local state. Secrets go in Vercel's environment variables instead.
+.env
+.env.*
+!.env.example
+var/
+.venv/
+.pytest_cache/
+**/__pycache__/
+*.db
+tests/
+evals/results/
+docs/

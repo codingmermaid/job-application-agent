@@ -1,13 +1,15 @@
 """Reviewer agent: checks accuracy, relevance, missing requirements and unsupported claims.
 
-Two layers: deterministic grounding checks in code, then an LLM review of whether each claim
-actually matches the facts it cites. The draft is ready only if both pass.
+Two layers: deterministic checks in code (grounding, plus the guardrail scan for unknown links and
+injected instructions), then an LLM review of whether each claim actually matches the facts it
+cites. The draft is ready only if both pass.
 """
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
 from ..grounding import check_draft
+from ..guardrails import scan_draft
 from ..llm import LLMClient
 from ..models import Candidate, Job
 
@@ -38,9 +40,11 @@ Do not flag honest statements about wanting to learn something. Be specific in c
 
 
 def review_application(
-    llm: LLMClient, candidate: Candidate, job: Job, company_name: str, brief: dict, draft: dict
+    llm: LLMClient, candidate: Candidate, job: Job, company_name: str, brief: dict, draft: dict,
+    company_website: str | None = None,
 ) -> dict:
     code_issues = check_draft(draft, candidate, brief, job, company_name)
+    code_issues += scan_draft(draft, candidate, company_website)
     evidence = "\n".join(f"[{e['id']}] {e['quote']}" for e in brief["evidence"])
     prompt = (
         f"Candidate facts:\n{candidate.facts_text()}\n\nCompany evidence:\n{evidence}\n\n"

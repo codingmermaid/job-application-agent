@@ -24,6 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]
+deploy = ["psycopg[binary]>=3.2", "psycopg-pool>=3.2", "langgraph-checkpoint-postgres>=2.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

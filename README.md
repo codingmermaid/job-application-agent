@@ -57,6 +57,15 @@ you, unticked, with the problems listed.
 **Verified company research.** Evidence quotes must appear word for word in the company's pages.
 Anything else is removed before the writer sees it.
 
+**Guardrails against prompt injection.** Company pages are untrusted: a page can contain text
+aimed at the model ("ignore your instructions and..."). Grounding does not stop that, because a
+quote from a poisoned page is still word for word. So (`src/jobagent/guardrails.py`):
+- sentences that read like instructions are removed from pages before any model sees them, and the
+  rest arrive inside `<untrusted>` markers the system prompt says are data, never orders;
+- before you approve, every draft is scanned for links and email addresses that are neither yours
+  nor the employer's, and for text that reads like an injected order; any hit blocks "ready";
+- every guardrail hit is logged as an alert on the `/ops` page.
+
 **Safe submission.**
 - Nothing is submitted without your approval.
 - Each application has one idempotency key. Before every attempt the agent asks the portal whether
@@ -169,22 +178,58 @@ stay under the free tier's rate limits.
 | `GEMINI_MODEL` | `gemini-3.5-flash` | Model names change; see https://ai.google.dev/gemini-api/docs/models |
 | `GEMINI_FALLBACK_MODELS` | `gemini-3.8-flash,gemini-3.1-flash-lite` | Tried in order when a model is busy or slow |
 | `LLM_MIN_INTERVAL_S` | `4` | Minimum seconds between calls (free-tier rate limits) |
-| `DATABASE_URL` | SQLite in `var/` | Any SQLAlchemy URL, e.g. Postgres |
-| `JOBAGENT_DATA_DIR` | `var/` | Local databases and the LLM response cache |
+| `DATABASE_URL` | SQLite in `var/` | Any SQLAlchemy URL, e.g. Postgres (`postgres://...` works as is) |
+| `JOBAGENT_DATA_DIR` | `var/` (`/tmp/jobagent` on Vercel) | Local databases and the LLM response cache |
+| `APP_PASSWORD` | none | Turns on a password prompt. Required on Vercel: the app refuses to start without it |
+| `MAX_RUNS_PER_DAY` | `20` | New runs are refused after this many in 24 hours, to cap spending |
 
 Responses are cached in `var/llm-cache/`, so repeating the same step costs nothing.
 
-## Built for deployment
+## Deploy to Vercel with Postgres
 
-The app is designed so the next step, hosting it, needs little change:
+The repository is ready for Vercel's Python runtime: `api/index.py` is the entry point,
+`vercel.json` routes every path to it with a 30-second limit, and `.vercelignore` keeps `.env`,
+local databases and tests out of the upload.
 
-- **Time-boxed steps.** Each graph node does at most one LLM call. Every browser poll advances the
-  run for a few seconds, and the state is checkpointed after every step, so no request runs long.
-  That suits serverless hosting such as Vercel.
-- **Resumable.** If a step fails (for example, Gemini is down), the run shows the error with a
-  Retry button that continues from the failed step without repeating earlier work.
-- **External database ready.** Storage uses SQLAlchemy, so `DATABASE_URL` can point at hosted Postgres.
-- **Health check** at `/health`.
+1. Create a Postgres database (Neon, Supabase, or one from the Vercel Marketplace) and copy its
+   connection string.
+2. Import the GitHub repository in Vercel. In **Settings > Environment Variables** add
+   `GEMINI_API_KEY`, `DATABASE_URL`, `APP_PASSWORD` and, if you like, `MAX_RUNS_PER_DAY`.
+3. Deploy. Tables and LangGraph checkpoint tables are created on the first request.
+
+What makes it work on serverless:
+- **Time-boxed steps.** Each browser poll advances a run for at most 8 seconds; every step is
+  checkpointed in Postgres, so any instance can continue any run.
+- **Shared state only in the database.** Run locks (Postgres advisory locks), the last error per
+  run, LLM call records and alerts all live in Postgres, not in one instance's memory.
+- **Fail closed.** On Vercel the app will not start without `APP_PASSWORD`.
+- **Monitoring.** `/ops` shows calls, tokens, p50/p95 latency and failures per agent, runs against
+  the daily cap, and recent alerts; `/ops.json` is the same for scripts; `/health` checks the database.
+
+**Rehearse it locally.** `deploy/simulate.py` runs several short-lived copies of `api/index.py`
+against Postgres, routes each request to a random one, recycles them, kills one mid-request, and
+checks the run still finishes with no duplicate submission:
+
+```bash
+pip install pgserver
+.venv\Scripts\python.exe deploy\simulate.py --out deploy-sim.json
+```
+
+## Evals
+
+```bash
+.venv\Scripts\python.exe evals\run_offline.py   # no API calls; runs in CI
+.venv\Scripts\python.exe evals\run_live.py      # uses Gemini; responses are cached
+```
+
+- **Offline:** the injection detector against labelled attacks, look-alike normal text and every
+  sentence of the sample pages; and planted defects in real drafts (invented fact ids, skills the
+  candidate lacks, unknown links, injected orders...) to see which check catches each one.
+- **Live:** a poisoned company page run through the researcher and writer with and without the
+  guardrails, and the reviewer's catch rate on invented achievements and inflated numbers.
+
+Results are written to `evals/results/`. CI (`.github/workflows/ci.yml`) runs the tests and the
+offline evals on every push and fails if the detector gets worse.
 
 ## Project structure
 
@@ -195,13 +240,18 @@ The app is designed so the next step, hosting it, needs little change:
 | `src/jobagent/graph.py` | The coordinator's LangGraph workflow |
 | `src/jobagent/runner.py` | Time-boxed stepping, retries and run status |
 | `src/jobagent/grounding.py` | Deterministic fact and evidence checks |
+| `src/jobagent/guardrails.py` | Injection screening, quarantine, draft scan, request limits, redaction |
+| `src/jobagent/ops.py` | Cross-instance locks, errors, LLM call log, alerts, `/ops` statistics |
 | `src/jobagent/portal.py` | Mock portal with deliberate failures |
 | `src/jobagent/tracker.py` | Application tracker and run history |
 | `src/jobagent/llm.py` | Gemini client: pacing, retries, fallback, cache, usage records |
 | `src/jobagent/web/` | FastAPI app, Jinja + HTMX templates |
 | `src/jobagent/profiles.py` | The active profile: yours once saved, otherwise the sample |
 | `src/jobagent/documents.py` | Reading uploaded CVs; Word and text downloads |
-| `tests/` | Workflow, agent and web tests |
+| `api/index.py`, `vercel.json` | Vercel entry point and configuration |
+| `deploy/simulate.py` | Local rehearsal of a serverless deployment |
+| `evals/` | Offline and live evals and their results |
+| `tests/` | Workflow, agent, guardrail and web tests |
 
 ## Tests
 
@@ -211,10 +261,10 @@ The app is designed so the next step, hosting it, needs little change:
 
 The tests script every LLM response, so they run offline and use no quota. They cover the full
 workflow, the revision loop, cancelling, retrying a failed step, grounding checks, every portal
-failure mode and the web app end to end.
+failure mode, the guardrails, the password gate and run cap, and the web app end to end.
 
 ## Ideas for later
 
-- Deployment (Vercel plus hosted Postgres) and monitoring (traces, latency and cost dashboards).
+- Alerts sent somewhere (email, Slack) instead of only shown on `/ops`.
 - Let you edit a draft or send feedback to the writer before approving.
 - Real job sources and portals behind the same interfaces, keeping the manual handoff as the fallback.

@@ -7,28 +7,26 @@ each poll does a slice of work.
 """
 from __future__ import annotations
 
-import threading
 import time
 from typing import Any
 
 from langgraph.types import Command
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 
 from .graph import new_run
+from .ops import OpsStore
 
 
 class Runner:
-    def __init__(self, graph):
+    def __init__(self, graph, ops: OpsStore | None = None):
         self.graph = graph
-        self._locks: dict[str, threading.Lock] = {}
-        self._guard = threading.Lock()
-        self._errors: dict[str, str] = {}  # last failure per run; cleared on retry
+        # Locks and the last error per run live in the database, so they hold across server instances.
+        self.ops = ops or OpsStore(create_engine("sqlite://", poolclass=StaticPool,
+                                                 connect_args={"check_same_thread": False}))
 
     def _config(self, run_id: str) -> dict:
         return {"configurable": {"thread_id": run_id}}
-
-    def _lock(self, run_id: str) -> threading.Lock:
-        with self._guard:
-            return self._locks.setdefault(run_id, threading.Lock())
 
     def start(self, request: str, candidate=None, *, budget_s: float = 0) -> str:
         state = new_run(request, candidate)
@@ -38,31 +36,29 @@ class Runner:
     def advance(self, run_id: str, *, budget_s: float = 10, resume: Any = None, retry: bool = False) -> dict:
         """Do up to budget_s of work (or deliver the user's answer), then report where the run stands."""
         if retry:
-            self._errors.pop(run_id, None)
+            self.ops.clear_error(run_id)
         if resume is None and self.view(run_id)["status"] != "running":
             return self.view(run_id)  # waiting for the user, finished, or failed: nothing to do
         self._step(run_id, Command(resume=resume) if resume is not None else None, budget_s)
         return self.view(run_id)
 
     def _step(self, run_id: str, graph_input: Any, budget_s: float) -> None:
-        lock = self._lock(run_id)
-        if not lock.acquire(blocking=False):
-            return  # another request is already advancing this run
-        try:
-            started = time.monotonic()
-            for _ in self.graph.stream(graph_input, self._config(run_id), stream_mode="updates"):
-                if time.monotonic() - started >= budget_s:
-                    break  # the checkpoint holds everything done so far
-        except Exception as exc:  # e.g. Gemini unavailable: the failed step can be retried from its checkpoint
-            self._errors[run_id] = f"{type(exc).__name__}: {exc}"
-        finally:
-            lock.release()
+        with self.ops.try_lock(run_id) as got:
+            if not got:
+                return  # another request (maybe on another instance) is already advancing this run
+            try:
+                started = time.monotonic()
+                for _ in self.graph.stream(graph_input, self._config(run_id), stream_mode="updates"):
+                    if time.monotonic() - started >= budget_s:
+                        break  # the checkpoint holds everything done so far
+            except Exception as exc:  # e.g. Gemini unavailable: the failed step can be retried from its checkpoint
+                self.ops.set_error(run_id, f"{type(exc).__name__}: {exc}")
 
     def view(self, run_id: str) -> dict:
         snapshot = self.graph.get_state(self._config(run_id))
         values = snapshot.values or {}
         interrupts = [i.value for task in snapshot.tasks for i in task.interrupts]
-        error = self._errors.get(run_id)
+        error = self.ops.get_error(run_id)
         if interrupts:
             status = "waiting"
         elif error and snapshot.next:
