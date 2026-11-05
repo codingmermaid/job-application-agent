@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e ".[dev,deploy]"
+      - run: pip install -e ".[dev]"
       - name: Unit tests (no API key needed; every LLM call is scripted)
         run: pytest -q
       - name: Offline evals (fail the build if the guardrails get worse)
